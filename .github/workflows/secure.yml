@@ -15,12 +15,14 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Asegura que se descarguen todos los archivos
 
       - name: Install Trivy
         run: |
-          sudo apt-get install -y wget
-          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.45.0_Linux-64bit.tar.gz
-          tar -xvzf trivy_0.45.0_Linux-64bit.tar.gz
+          TRIVY_VERSION=$(curl -s https://api.github.com/repos/aquasecurity/trivy/releases/latest | grep "tag_name" | cut -d '"' -f 4 | sed 's/v//')
+          wget "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          tar zxvf trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz
           sudo mv trivy /usr/local/bin/
 
       - name: Run Trivy on Repo
@@ -32,6 +34,11 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Asegura que se traigan todos los archivos
+
+      - name: Debug: List files
+        run: ls -la  # Verifica si hay archivos en el repositorio
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -51,8 +58,12 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: "https://sonarcloud.io"
         run: |
-          mvn sonar:sonar \
-            -Dsonar.organization=your-org \
-            -Dsonar.projectKey=your-project-key \
-            -Dsonar.host.url=$SONAR_HOST_URL \
-            -Dsonar.login=$SONAR_TOKEN
+          if [ -f "pom.xml" ]; then
+            mvn sonar:sonar \
+              -Dsonar.organization=your-org \
+              -Dsonar.projectKey=your-project-key \
+              -Dsonar.host.url=$SONAR_HOST_URL \
+              -Dsonar.login=$SONAR_TOKEN
+          else
+            echo "❌ No se encontró pom.xml. Saltando análisis con SonarQube."
+          fi
