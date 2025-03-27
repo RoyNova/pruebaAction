@@ -39,37 +39,16 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Cache SonarQube packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-sonar-
-
       - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Auto-generado
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}    # Opcional si usas GitHub App
-        run: |
-          # Configuración SonarCloud (reemplaza estos valores)
-          SONAR_ORG="tu-organizacion"  # Ej: "githubusername"
-          SONAR_PROJECT="tu-proyecto"  # Ej: "githubusername_reponame"
-          SONAR_HOST="https://sonarcloud.io"
-
-          if [ -f "pom.xml" ]; then
-            mvn -B verify \
-              org.sonarsource.scanner.maven:sonar-maven-plugin:3.9.1.2184:sonar \
-              -Dsonar.host.url=$SONAR_HOST \
-              -Dsonar.organization=$SONAR_ORG \
-              -Dsonar.projectKey=$SONAR_PROJECT \
-              -Dsonar.java.source=17 \
-              -Dsonar.sourceEncoding=UTF-8
-          elif [ -f "build.gradle" ]; then
-            ./gradlew sonarqube \
-              -Dsonar.host.url=$SONAR_HOST \
-              -Dsonar.organization=$SONAR_ORG \
-              -Dsonar.projectKey=$SONAR_PROJECT \
-              -Dsonar.java.source=17
-          else
-            echo "No build file detected. Skipping SonarCloud analysis."
-          fi
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Auto-generado por GitHub
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}    # Solo necesario si el repo es privado
+        with:
+          args: >
+            -Dsonar.organization=roy-nova
+            -Dsonar.projectKey=RoyNova_pruebaAction
+            -Dsonar.projectName=pruebaAction
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.java.source=17
+            -Dsonar.sourceEncoding=UTF-8
