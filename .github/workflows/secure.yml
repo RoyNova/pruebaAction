@@ -1,4 +1,4 @@
-name: CI Pipeline with Trivy and SonarCloud (Auto-config)
+name: CI Pipeline with Trivy and SonarCloud
 
 on:
   push:
@@ -22,7 +22,6 @@ jobs:
           scan-type: 'fs'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
-          format: 'table'
 
   sonarcloud_analysis:
     name: SonarCloud Analysis
@@ -32,7 +31,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Necesario para SonarCloud
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -40,21 +39,34 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Cache SonarQube packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-sonar-
+
       - name: SonarCloud Scan
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Auto-generado por GitHub
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Auto-generado
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}    # Opcional si usas GitHub App
         run: |
-          # Configuración pública (sin secrets)
-          SONAR_ORG="your-org-name"  # Reemplaza con tu organización pública
-          SONAR_PROJECT="your-project-key"  # Reemplaza con tu clave pública
+          # Configuración SonarCloud (reemplaza estos valores)
+          SONAR_ORG="tu-organizacion"  # Ej: "githubusername"
+          SONAR_PROJECT="tu-proyecto"  # Ej: "githubusername_reponame"
+          SONAR_HOST="https://sonarcloud.io"
 
           if [ -f "pom.xml" ]; then
-            mvn -B verify sonar:sonar \
+            mvn -B verify \
+              org.sonarsource.scanner.maven:sonar-maven-plugin:3.9.1.2184:sonar \
+              -Dsonar.host.url=$SONAR_HOST \
               -Dsonar.organization=$SONAR_ORG \
               -Dsonar.projectKey=$SONAR_PROJECT \
-              -Dsonar.java.source=17
+              -Dsonar.java.source=17 \
+              -Dsonar.sourceEncoding=UTF-8
           elif [ -f "build.gradle" ]; then
             ./gradlew sonarqube \
+              -Dsonar.host.url=$SONAR_HOST \
               -Dsonar.organization=$SONAR_ORG \
               -Dsonar.projectKey=$SONAR_PROJECT \
               -Dsonar.java.source=17
