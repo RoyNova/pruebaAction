@@ -40,9 +40,10 @@ jobs:
           distribution: 'temurin'
 
       - name: Run SonarCloud Analysis
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
-          GITHUB_TOKEN: ${{ github.token }}  # Token automático
+          GITHUB_TOKEN: ${{ github.token }}
+          SONAR_TOKEN: "def66e730b6bda135e3e2d6579a7df22a8bc4a5e"  # Token hardcodeado
         with:
           args: >
             -Dsonar.organization=roy-nova
