@@ -43,7 +43,7 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          SONAR_TOKEN: "def66e730b6bda135e3e2d6579a7df22a8bc4a5e"  # Token hardcodeado
+          SONAR_TOKEN: "96ba48a2e573b4fd9a0daa871ac96356171d1ab7"  # Token hardcodeado
         with:
           args: >
             -Dsonar.organization=roy-nova
