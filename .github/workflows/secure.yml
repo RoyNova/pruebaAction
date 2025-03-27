@@ -1,34 +1,34 @@
-name: CI Pipeline with Trivy and SonarCloud
+name: Security Scan & SonarCloud Analysis
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
-  security_scan:
-    name: Security Scan with Trivy
+  trivy_scan:
+    name: Run Trivy Security Scan
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Trivy Security Scanner
+      - name: Scan with Trivy
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
+          format: 'table'
+          ignore-unfixed: true
 
   sonarcloud_analysis:
-    name: SonarCloud Analysis
-    needs: security_scan
+    name: SonarCloud Scan
+    needs: trivy_scan  # Espera a que Trivy termine
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -39,16 +39,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: SonarCloud Scan
+      - name: Run SonarCloud Analysis
         uses: SonarSource/sonarcloud-github-action@master
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Auto-generado por GitHub
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}    # Solo necesario si el repo es privado
+          GITHUB_TOKEN: ${{ github.token }}  # Token automático
         with:
           args: >
             -Dsonar.organization=roy-nova
             -Dsonar.projectKey=RoyNova_pruebaAction
-            -Dsonar.projectName=pruebaAction
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.java.source=17
             -Dsonar.sourceEncoding=UTF-8
