@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI Pipeline with Trivy and SonarCloud (Auto-config)
 
 on:
   push:
@@ -14,31 +14,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Run Trivy Security Scanner
+        uses: aquasecurity/trivy-action@master
         with:
-          fetch-depth: 0  # Asegura que se descarguen todos los archivos
+          scan-type: 'fs'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          format: 'table'
 
-      - name: Install Trivy
-        run: |
-          TRIVY_VERSION=$(curl -s https://api.github.com/repos/aquasecurity/trivy/releases/latest | grep "tag_name" | cut -d '"' -f 4 | sed 's/v//')
-          wget "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
-          tar zxvf trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz
-          sudo mv trivy /usr/local/bin/
-
-      - name: Run Trivy on Repo
-        run: trivy fs --severity CRITICAL,HIGH --exit-code 1 --no-progress .
-
-  sonar_scan:
-    name: SonarQube Analysis
+  sonarcloud_analysis:
+    name: SonarCloud Analysis
+    needs: security_scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Asegura que se traigan todos los archivos
-
-      - name: Debug: List files
-        run: ls -la  # Verifica si hay archivos en el repositorio
+          fetch-depth: 0  # Necesario para SonarCloud
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
@@ -46,24 +40,24 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Cache SonarQube packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-
-      - name: Run SonarQube Scan
+      - name: SonarCloud Scan
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: "https://sonarcloud.io"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Auto-generado por GitHub
         run: |
+          # Configuración pública (sin secrets)
+          SONAR_ORG="your-org-name"  # Reemplaza con tu organización pública
+          SONAR_PROJECT="your-project-key"  # Reemplaza con tu clave pública
+
           if [ -f "pom.xml" ]; then
-            mvn sonar:sonar \
-              -Dsonar.organization=your-org \
-              -Dsonar.projectKey=your-project-key \
-              -Dsonar.host.url=$SONAR_HOST_URL \
-              -Dsonar.login=$SONAR_TOKEN
+            mvn -B verify sonar:sonar \
+              -Dsonar.organization=$SONAR_ORG \
+              -Dsonar.projectKey=$SONAR_PROJECT \
+              -Dsonar.java.source=17
+          elif [ -f "build.gradle" ]; then
+            ./gradlew sonarqube \
+              -Dsonar.organization=$SONAR_ORG \
+              -Dsonar.projectKey=$SONAR_PROJECT \
+              -Dsonar.java.source=17
           else
-            echo "❌ No se encontró pom.xml. Saltando análisis con SonarQube."
+            echo "No build file detected. Skipping SonarCloud analysis."
           fi
